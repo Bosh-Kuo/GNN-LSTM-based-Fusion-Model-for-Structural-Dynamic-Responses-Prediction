@@ -1,22 +1,26 @@
-import argparse
-import json
-import os
-import numpy as np
 import torch
-from Models.GCN_LSTM import GCN_LSTM, LSTM, GCN_Encoder
-from torch_geometric.loader import DataLoader as GraphDataLoader
+import torch.nn as nn
+import numpy as np
+import argparse
+import os
+import json
 from tqdm import tqdm
+from datetime import datetime
+from torch_geometric.loader import DataLoader as GraphDataLoader
 from Utils.dataset import GraphDataset
+from Utils.setLogger import setLogger
 from Utils.utils import (
-    R_square,
-    normalized_MSE,
-    peakError,
-    plot_error_histogram,
-    plot_ground_motion,
-    plot_scatter,
-    plot_story_response,
     same_seeds,
+    plot_ground_motion,
+    plot_story_response,
+    peakError,
+    normalized_MSE,
+    R_square,
+    plot_error_histogram,
+    plot_scatter,
+    plot_attention,
 )
+from Models.GAT_LSTM import GAT_LSTM, LSTM, GAT_Encoder
 
 # * Basic Settings
 def parse_args():
@@ -24,9 +28,9 @@ def parse_args():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="./Results/GCN_LSTM/Nonlinear_Analysis/Acceleration/2022_09_09__18_27_46",
+        default="./Results/GAT_LSTM/Nonlinear_Analysis/Displacement/2022_07_11__08_19_22",
     )
-    parser.add_argument("--MAX_plot_num", type=int, default=4)
+    parser.add_argument("--MAX_plot_num", type=int, default=40)
     args = parser.parse_args()
     return args
 
@@ -62,7 +66,6 @@ print(f"# of effective eval data: {len(eval_dataset)}")
 print(f"{'=' * 100}")
 
 # * Data Preprocessing
-# get normalized_item_dict
 normalized_item_dict = torch.load(
     os.path.join(args.output_dir, "normalized_item_dict.pth")
 )
@@ -75,18 +78,20 @@ print(f"{'=' * 100}")
 # plot 不需要更新 model，不需要算 loss 所以不需要 normalize target
 eval_dataset.normalize_source(normalized_item_dict)
 
+
 # * Prepare GraphDataloader
 eval_loader = GraphDataLoader(eval_dataset, batch_size=1, shuffle=False)
 
-# * Model (GCN_LSTM)
-# Build GCN Encoder and LSTM
+# * Model (GAT_LSTM)
 input_dim = eval_dataset[0].x.size(-1)
-GCN_Encoder_constructor_args = {
+GAT_Encoder_constructor_args = {
     "input_dim": input_dim,
     "hid_dim": args.hid_dim,
+    "edge_dim": args.edge_dim,
     "gnn_embed_dim": args.gnn_embed_dim,
     "dropout": args.dropout,
 }
+
 
 LSTM_constructor_args = {
     "gnn_embed_dim": args.gnn_embed_dim,
@@ -97,9 +102,9 @@ LSTM_constructor_args = {
     "compression_rate": args.compression_rate,
     "max_story": args.max_story,
 }
-gcn_encoder = GCN_Encoder(**GCN_Encoder_constructor_args)
+gat_encoder = GAT_Encoder(**GAT_Encoder_constructor_args)
 lstm = LSTM(**LSTM_constructor_args)
-model = GCN_LSTM(gcn_encoder, lstm, device).to(device)
+model = GAT_LSTM(gat_encoder, lstm, device).to(device)
 print(f"\n\n** Model Info **")
 print(f"{'=' * 100}")
 print(model)
@@ -123,8 +128,9 @@ height_list = []
 with torch.no_grad():
     for i, Data in enumerate(tqdm(eval_loader)):
         model.eval()
+        output, edge_index_returned, attention_weights = model(Data)
         # y_pred = [1, trg_length, max_story]
-        y_pred = model(Data) * normalized_item_dict["y"]
+        y_pred = output * normalized_item_dict["y"]
         # y_pred = [trg_length, max_story]
         y_pred = torch.squeeze(y_pred).detach().cpu().numpy()
         # y_ture = [trg_length, max_story]
@@ -145,6 +151,45 @@ with torch.no_grad():
             sample_folder = os.path.join(eval_fig_dir, f"sample{i}")
             if not os.path.isdir(sample_folder):
                 os.mkdir(sample_folder)
+
+            ## Plot Attention
+            x_coord = (
+                Data.x[:, 3].numpy()
+                * normalized_item_dict["x"]["XYZ_grid_index"].item()
+            )
+            y_coord = (
+                Data.x[:, 5].numpy()
+                * normalized_item_dict["x"]["XYZ_grid_index"].item()
+            )
+            z_coord = (
+                Data.x[:, 4].numpy()
+                * normalized_item_dict["x"]["XYZ_grid_index"].item()
+            )
+            node_color = attention_weights[Data.edge_index.size(-1) :].cpu().numpy()
+            edge_color = attention_weights[: Data.edge_index.size(-1)].cpu().numpy()
+            edge_pos_xyz = np.array(
+                [
+                    (
+                        (x_coord[u] / 2 + x_coord[v] / 2),
+                        (y_coord[u] / 2 + y_coord[v] / 2).item(),
+                        (z_coord[u] / 2 + z_coord[v] / 2).item(),
+                        x_coord[v].item(),
+                        y_coord[v].item(),
+                        z_coord[v].item(),
+                    )
+                    for u, v in torch.transpose(Data.edge_index, 0, 1)
+                ]
+            )
+            ## Plot Attention
+            plot_attention(
+                x_coord,
+                y_coord,
+                z_coord,
+                node_color,
+                edge_color,
+                edge_pos_xyz,
+                sample_folder,
+            )
             ## Plot ground motion
             plot_ground_motion(
                 ground_motion[:src_seq_len],
@@ -192,6 +237,7 @@ with torch.no_grad():
             print(
                 f"R_square: {sum([R_square(y_true[:trg_seq_len, i], y_pred[:trg_seq_len, i]) for i in range(story)]) / story}, data: {i}, ground motion: {Data.ground_motion_name[0]}"
             )
+
 
 # * plot statistics figures
 ## Histogram
@@ -247,41 +293,6 @@ plot_scatter(
     y=peakError_list,
     colors=height_list,
     x_label="sequence length (sec)",
-    y_label="peak_Error(%)",
-    color_label="building height(F)",
-    response_type=args.response_type,
-    save_folder=eval_fig_dir,
-)
-
-# X = first period
-# normMSE
-plot_scatter(
-    x=first_period_list,
-    y=normMSE_list,
-    colors=height_list,
-    x_label="first period (sec)",
-    y_label="NMSE",
-    color_label="building height(F)",
-    response_type=args.response_type,
-    save_folder=eval_fig_dir,
-)
-# R_square
-plot_scatter(
-    x=first_period_list,
-    y=R_square_list,
-    colors=height_list,
-    x_label="first period (sec)",
-    y_label="R_squared",
-    color_label="building height(F)",
-    response_type=args.response_type,
-    save_folder=eval_fig_dir,
-)
-# peak Error
-plot_scatter(
-    x=first_period_list,
-    y=peakError_list,
-    colors=height_list,
-    x_label="first period (sec)",
     y_label="peak_Error(%)",
     color_label="building height(F)",
     response_type=args.response_type,

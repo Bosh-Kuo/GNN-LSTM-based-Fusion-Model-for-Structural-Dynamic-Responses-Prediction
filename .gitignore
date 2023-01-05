@@ -1,0 +1,8 @@
+# env
+__pycache__
+.vscode
+
+# folders
+Data
+Results
+Inference

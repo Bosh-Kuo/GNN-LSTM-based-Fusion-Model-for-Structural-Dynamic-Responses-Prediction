@@ -1,17 +1,34 @@
 # GNN-LSTM-based Fusion Model for Structural Dynamic Responses Prediction
 
 ## Introduction
-In this study, we developed a novel GNN-LSTM-based fusion model framework. It can predict the nonlinear responses history of acceleration, velocity, and displacement for each floor of any SMRF structure between 4 and 7 stories in height.
+In this study, I developed a novel **`GNN-LSTM-based` fusion model framework**. It can predict the nonlinear responses history of acceleration, velocity, and displacement for each floor of any SMRF structure between 4 and 7 stories in height.
 ![Model](./Figures/fusion_model.png)
+
+In addition, two _LSTM-optimized_ learning strategies, including a **packing padded sequences(PPS) strategy** and a **sequences compression(SC) strategy**, are also proposed in this project. The experimental results of this study demonstrated that the PPS learning strategy successfully reduced the noise in the sequence data, improving the stability of the training process and the model’s predictive ability, and the SC learning strategy significantly short- ened the training time with only a minor reduction in model accuracy while retaining the complete information of the original sequences in the compressed sequences.
+
+<p align="center">
+  <img src="./Figures/PPS.png" width=49%>
+  <img src="./Figures/SC.png" width=49%
+</p>
+
+Finally, the fusion model’s graph embedding and graph embedding network were visualized. The graph embeddings of the structures were highly correlated with their first modal periods. Moreover, the **rigid diaphragm** setting in structures appeared in the message transmission trend of the **graph attention network (GAT)**, which implies that the model learned the physically meaningful message transmission during the training process.
+
+<p align="center">
+  <img src="./Figures/GCN_embededing_1st_period.png" width=36%>
+  <img src="./Figures/attention_5F.png" width=53%
+</p>
 
 ---
 
 ## Installation
 - Linux, CUDA>=11.3
 - Python>=3.9.7
+- pyg>=2.0.3
+- pytorch>=1.10.2
 
-We recommend you to use Anaconda to create a conda environment:
+Anaconda is recommended to use to create a conda environment:
 ```
+# Optional. If it doesn't work, just make sure you have installed the above packages.
 conda env create -f ./environment.yml
 ```
 

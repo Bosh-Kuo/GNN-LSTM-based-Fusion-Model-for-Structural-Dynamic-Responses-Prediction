@@ -11,12 +11,17 @@ In addition, two _LSTM-optimized_ learning strategies, including a **packing pad
   <img src="./Figures/SC.png" width=49%
 </p>
 
-Finally, the fusion model’s graph embedding and graph embedding network were visualized. The graph embeddings of the structures were highly correlated with their first modal periods. Moreover, the **rigid diaphragm** setting in structures appeared in the message transmission trend of the **graph attention network (GAT)**, which implies that the model learned the physically meaningful message transmission during the training process.
+Finally, the **two-dimension graph embedding** empowered by **t-sne** algorithm and **graph attention distribution** within the **GAT** network were visualized. The graph embeddings of the structures were highly correlated with their first modal periods. Moreover, the distribution of attention weight on each floor shows symmetry, implying that the GAT model effectively captures the inherent symmetries in the geometry and vibration shape of the building. This observation aligns well with the rigid diaphragm assumption applied to each floor of the numerical structural models. The combined results suggest that the message-passing mechanism acquired by the **GAT** during training aligns with physical principles.
+
+
 
 <p align="center">
-  <img src="./Figures/GCN_embededing_1st_period.png" width=36%>
-  <img src="./Figures/attention_5F.png" width=53%
+  <img src="./Figures/GCN_embedding_1st_period.png" width=33%>
+  <img src="./Figures/GCN_embedding_F.png" width=32%>
+  <img src="./Figures/GCN_embedding_nodes.png" width=33%>
 </p>
+
+![Attention](./Figures/All_Floors_Attention.png)
 
 ---
 

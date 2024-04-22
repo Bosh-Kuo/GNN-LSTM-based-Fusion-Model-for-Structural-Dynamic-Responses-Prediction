@@ -1,6 +1,9 @@
 # GNN-LSTM-based Fusion Model for Structural Dynamic Responses Prediction
 
 ## Introduction
+This project is based on the research presented in the following published paper:   
+[GNN-LSTM-based Fusion Model for Structural Dynamic Responses Prediction](https://www.sciencedirect.com/science/article/pii/S0141029624002955)
+
 In this study, I developed a novel **`GNN-LSTM-based` fusion model framework**. It can predict the nonlinear responses history of acceleration, velocity, and displacement for each floor of any SMRF structure between 4 and 7 stories in height.
 ![Model](./Figures/fusion_model.png)
 
@@ -93,3 +96,21 @@ python test_GCN_LSTM.py --output_dir <folder path of target GCN_LSTM model>
 # use GAT as aggregation function
 python test_GAT_LSTM.py --output_dir <folder path of target GAT_LSTM model>
 ```
+
+## Citation
+If you use this project in your research or wish to refer to the benchmarks results, please use the following BibTex
+
+```
+@article{kuo2024gnn,
+  title={GNN-LSTM-based fusion model for structural dynamic responses prediction},
+  author={Kuo, Po-Chih and Chou, Yuan-Tung and Li, Kuang-Yao and Chang, Wei-Tze and Huang, Yin-Nan and Chen, Chuin-Shan},
+  journal={Engineering Structures},
+  volume={306},
+  pages={117733},
+  year={2024},
+  publisher={Elsevier}
+}
+```
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](./License) file for details.
